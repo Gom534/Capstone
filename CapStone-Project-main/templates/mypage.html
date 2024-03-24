@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>My Page</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@2.9.4"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-streaming@1.9.0"></script>
+    <style>
+        body {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            background-color: #f4f4f4;
+            font-family: Arial, sans-serif;
+        }
+    
+        .chart-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+    
+        .chart {
+            width: 500px;
+            height: 300px;
+            max-width: 100%;
+            background-color: #fff;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            margin-right: 20px;
+        }
+    
+        #resultText {
+            font-size: 16px;
+            text-align: center;
+            margin-top: 20px;
+        }
+    
+        #dumbbellWeight {
+            font-size: 16px;
+            text-align: center;
+            margin-top: 20px;
+        }
+    
+        #header {
+            position: absolute;
+            top: 0;
+            right: 0;
+            width: 200px;
+            padding: 10px;
+            background-color: #f4f4f4;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+        #header .user-id {
+            font-size: 14px;
+            font-weight: bold;
+            margin-right: 40px;
+        }
+    
+        #logout-btn {
+            font-size: 14px;
+            padding: 8px 12px;
+            background-color: #e74c3c;
+            color: #fff;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+    
+        #logout-btn {
+            margin-left: 10px;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="header">
+        <div>
+            <span class="user-id" id="user-id"></span>
+            <button id="logout-btn">Logout</button>
+        </div>
+    </div>
+    <div class="chart-container">
+        <div class="chart">
+            <canvas id="chartPredictions"></canvas>
+        </div>
+        <div class="chart">
+            <canvas id="chartAvgRMS"></canvas>
+        </div>
+    </div>
+    <div id="resultText"></div>
+    <div id="dumbbellWeight"></div>
+    <script>
+        window.addEventListener('load', function () {
+            // 페이지 로딩 완료 후 실행될 코드
+            $.post("/self")
+                .done(function (response) {
+                    console.log("Success:", response);
+                })
+                .fail(function () {
+                    console.log("Failed to stop data collection");
+                });
+        });
+
+        const socket = io('http://127.0.0.1:5500');
+        var predictions = 0;
+        var total_avg_rms = 0;
+        var dumbbell = 0;
+
+        socket.on('result', function (data) {
+            predictions = data.predicted_weight;
+            total_avg_rms = data.total_avg_rms;
+            dumbbell = data.dumbbell_weight;
+            user_id = data.user_id;
+            createBarChart('chartPredictions', 'Predicted Weight', predictions, dumbbell, '#3498db');
+            createBarChart('chartAvgRMS', 'Average RMS', total_avg_rms, dumbbell, '#2ecc71');
+            userid(user_id);
+            displayResult(predictions, total_avg_rms, dumbbell);
+        });
+
+        // Create bar chart
+        function createBarChart(canvasId, label, value, dumbbell, color) {
+            let ctx = document.getElementById(canvasId);
+            let chart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: [label],
+                    datasets: [{
+                        label: dumbbell,
+                        data: [value],
+                        backgroundColor: [color],
+                    }]
+                },
+                options: {
+                    scales: {
+                        x: {
+                            display: false
+                        },
+                        y: {
+                            ticks: {
+                                font: {
+                                    size: 12
+                                },
+                                min: 0,
+                                max: 10,
+                            }
+                        }
+                    }
+                }
+            });
+        }
+        function userid(user_id) {
+            var id = document.getElementById('user-id');
+            id.textContent = user_id;
+        }
+        // Display result
+        function displayResult(predictions, total_avg_rms, dumbbell) {
+            var resultText = document.getElementById('resultText');
+            var dumbbellText = document.getElementById('dumbbellWeight');
+            var result = '';
+
+            if (total_avg_rms > predictions) {
+                result = '근력이 평균보다 약한 편입니다.';
+                resultText.style.color = '#e74c3c';  // 빨간색
+            } else {
+                result = '근력이 평균보다 좋은 편입니다.';
+                resultText.style.color = '#27ae60';  // 녹색
+            }
+
+            resultText.textContent = result;
+            dumbbellText.textContent = '덤벨 무게: ' + (dumbbell !== undefined ? dumbbell : '');
+        }
+    </script>
+</body>
+
+</html>

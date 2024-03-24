@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>근전도 데이터 분석</title>
+    <link href="/static/css/main.css" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/moment@2.29.1"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@2.9.4"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-streaming@1.9.0"></script>
+
+    <style>
+        #chart-container {
+            width: 800px;
+            /* 원하는 가로 크기로 조정 */
+            height: 400px;
+            /* 원하는 세로 크기로 조정 */
+        }
+    </style>
+</head>
+
+<body>
+    <div id="header">
+        {% if logged_in %}
+        <button id="mypage-button">마이페이지</button>
+        <button id="logout-button">로그아웃</button>
+
+        {% else %}
+        <button id="login-button">로그인</button>
+        <button id="signup-button">회원가입</button>
+        {% endif %}
+    </div>
+    <div id="chart-container">
+        <h1>실시간 데이터</h1>
+        <canvas id="chart"></canvas>
+        <div id="start-stop-container">
+            <input type="number" id="dumbbell-weight-input" placeholder="덤벨무게를 입력하세요">
+            <button id="start-button">시작</button>
+            <button id="stop-button">중지</button>
+        </div>
+    </div>
+    <script>
+        // let chartContainer = document.getElementById('chart-container');
+        let chart = new Chart(document.getElementById('chart'), {
+            type: 'line',
+            data: {
+                datasets: [{
+                    data: [],
+                    label: 'First Data',
+                    borderColor: 'rgb(75, 192, 192)',
+                    fill: false,
+                    pointRadius: 0,
+                    borderWidth: 1,
+                }, {
+                    data: [],
+                    label: 'Second Data',
+                    borderColor: 'rgb(255, 99, 132)',
+                    fill: false,
+                    pointRadius: 0,
+                    borderWidth: 1,
+                }]
+            },
+            options: {
+                maintainAspectRatio: false, // 크기를 고정하지 않으려면 false로 설정
+                responsive: true,
+                scales: {
+                    xAxes: [{
+                        type: 'realtime',
+                        realtime: {
+                            delay: 2000
+                        }
+                    }],
+                    yAxes: [{
+                        ticks: {
+                            min: 0,   // 최소 값
+                            max: 3   // 최대 값
+                        },
+                        scaleLabel: {
+                            display: true,
+                            labelString: 'Value'
+                        }
+                    }]
+                },
+                plugins: {
+                    streaming: {
+                        frameRate: 30
+                    }
+                }
+            }
+        });
+    </script>
+    <script>
+        const socket = io('http://127.0.0.1:5500');
+        socket.on('message', function (event) {
+            console.log("Received message:", event);
+            let data = event;
+            addDataToChart(data);
+        });
+
+        socket.on('error', function (event) {
+            
+        });
+        function addDataToChart(data) {
+            setTimeout(function () {
+                chart.data.datasets[0].data.push({
+                    x: Date.now(),
+                    y: data.first_data
+                });
+                chart.data.datasets[1].data.push({
+                    x: Date.now(),
+                    y: data.second_data
+                });
+                chart.update({
+                    preservation: true
+                });
+            }, 0);
+        }
+
+        $(document).ready(function () {
+            $("#start-button").click(function () {
+                // 입력된 덤벨무게 가져오기
+                socket.connect();
+                var dumbbellWeight = $("#dumbbell-weight-input").val();
+                // 이전에 추가된 데이터 초기화
+                chart.data.datasets[0].data = [];
+                chart.data.datasets[1].data = [];
+                // Send a POST request to the startDataCollection route
+                $.post("/startDataCollection", { dumbbellWeight: dumbbellWeight })
+                    .done(function (response) {
+                        
+                    })
+                    .fail(function () {
+                        console.log("Failed to start data collection");
+                    });
+            });
+            // Login button click event
+            $("#login-button").click(function () {
+                // Redirect to the login page
+                window.location.href = "loginhtml";
+            });
+
+            // Sign up button click event
+            $("#signup-button").click(function () {
+                // Redirect to the sign up page
+                window.location.href = "joinhtml";
+            });
+            // My page button click event
+            $("#mypage-button").click(function () {
+                // Redirect to the my page
+                window.location.href = "mypagehtml";
+            });
+            $("#logout-button").click(function () {
+                // Redirect to the logout page
+                window.location.href = "logout";
+            });
+            $("#stop-button").click(function () {
+                // Send a POST request to the stopDataCollection route
+                $.post("/stopDataCollection", { action: "stopDataCollection" })
+                    .done(function (response) {
+                        console.log("Success:", response);
+                    })
+                    .fail(function () {
+                        console.log("Failed to stop data collection");
+                    });
+            });
+        });
+    </script>
+</body>
+
+</html>

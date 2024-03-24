@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Join Membership</title>
+    <link href="/static/css/join_membership.css" rel="stylesheet">
+</head>
+<body>
+    <section class="signup">
+        <h1>회원가입</h1>
+        <div class="signup__card">
+            <h2>
+                이미 계정이 있습니까? <strong><a href="loginhtml">로그인</a></strong>
+            </h2>
+
+            <form action="/register" method="POST">
+                <input type="text" name="username" placeholder="아이디" required>
+                <input type="password" name="password" placeholder="비밀번호" required>
+                <input type="submit" value="회원가입">
+                <p>
+                    * 비밀번호를 타 사이트와 같이 사용할 경우 도용 위험이 있으니 <br>
+                    정기적으로 비밀번호를 변경하세요!
+                </p>
+            </form>
+        </div>
+    </section>
+</body>
+</html>
